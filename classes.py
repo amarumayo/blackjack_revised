@@ -28,9 +28,12 @@ class Card:
     }    
     
     def __repr__(self):
-        
-        rep = "".join((str(self.rank), self.suit_lu[self.suit]))
-        return(rep)
+        rep = f"Card('{self.rank}', '{self.suit}')"
+        return rep
+
+    def __str__(self):
+        string = "".join((str(self.rank), self.suit_lu[self.suit]))
+        return string
        
 class Deck():
     def __init__(self):
@@ -45,14 +48,18 @@ class Deck():
         self.cards = []
 
     def shuffle(self):
-        random.shuffle(self.cards)
+        return random.shuffle(self.cards)
 
     def deal(self):
-        return(self.cards.pop())
+        return self.cards.pop(0)
+
+    def __str__(self):
+        num_remaining = f"Cards Remaining: {len(self.cards)}"
+        next_card =  f"Next Card: {str(self.cards[0])}"  
+        return num_remaining + '\n' + next_card
 
     def __repr__(self):
-        rep = f"{str(len(self.cards))} cards remaining in the deck"
-        return(rep)
+        return f'Deck({self.cards})'
 
 
 class Hand:
@@ -107,11 +114,11 @@ class Hand:
         if (self.is_dealer and dealer_hide):
             dealer_display = self.cards[:] 
             dealer_display[0] = Card('X', 'X')
-            print(f"Dealer: {str(dealer_display)}")
+            print('Dealer: ' + ' '.join(str(card) for card in dealer_display))
         elif (self.is_dealer and not dealer_hide):
-            print(f"Dealer: {str(self.cards)}")
+            print('Dealer: ' + ' '.join(str(card) for card in self.cards))
         elif(not self.is_dealer):
-            print(f"Player: {str(self.cards)}")
+            print('Player: ' + ' '.join(str(card) for card in self.cards))
 
     def message_hand_win(self):
         if self.is_dealer:
@@ -130,6 +137,15 @@ class Hand:
             if answer.lower() == "s":
                 print(f"Player stands with hand of {str(self.value)}\n")
                 self.is_active = False
+
+    def __repr__(self):
+        return f'Hand({self.cards}, {self.is_dealer}, {self.is_active})'
+
+    def __str__(self):
+        num_cards = f'Number of cards in hand: {len(self.cards)}'
+        value = f'Hand value: {str(self.value)}'
+        return(num_cards + '\n' + value)
+
     
 
 class Game:
@@ -183,7 +199,6 @@ class Game:
             print('Blackjack!')
             player.message_hand_win()
             self.end()
-
 
         dealer.show_hand(dealer_hide = True)
 
