@@ -111,14 +111,13 @@ class Hand:
 
     def show_hand(self, dealer_hide = False):
         
-        if (self.is_dealer and dealer_hide):
-            dealer_display = self.cards[:] 
-            dealer_display[0] = Card('X', 'X')
-            print('Dealer: ' + ' '.join(str(card) for card in dealer_display))
-        elif (self.is_dealer and not dealer_hide):
-            print('Dealer: ' + ' '.join(str(card) for card in self.cards))
-        elif(not self.is_dealer):
-            print('Player: ' + ' '.join(str(card) for card in self.cards))
+        if self.is_dealer:
+            if dealer_hide:
+                print(f'Dealer: X, {", ".join(str(card) for card in self.cards[1:])}')
+            else:
+                print(f'Dealer: {", ".join(str(card) for card in self.cards)}')
+        else:
+            print(f'Player: {", ".join(str(card) for card in self.cards)}')
 
     def message_hand_win(self):
         if self.is_dealer:
