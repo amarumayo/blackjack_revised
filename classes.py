@@ -1,6 +1,7 @@
 import random
 import sys
 import time
+import os
 
 class Card:
     # card class
@@ -8,10 +9,10 @@ class Card:
 
         if rank not in [
             '1', '2', '3', '4', '5', '6',
-            '7', '8', '9', '10', 'A', 'J', 'Q', 'K', 'X']:
+            '7', '8', '9', '10', 'A', 'J', 'Q', 'K']:
                 raise ValueError("Invalid rank")
 
-        valid_suits = ['D', 'S', 'C', 'H', 'X']
+        valid_suits = ['D', 'S', 'C', 'H']
         if suit not in valid_suits:
             raise ValueError(f"Invalid suit. Valid suits are {valid_suits}")
 
@@ -23,8 +24,7 @@ class Card:
         "C": "\u2663",
         "H": "\u2665",
         "D": "\u2666",
-        "S": "\u2660",
-        "X": ''
+        "S": "\u2660"
     }    
     
     def __repr__(self):
@@ -121,12 +121,6 @@ class Hand:
         else:
             print(f'Player: {", ".join(str(card) for card in self.cards)}')
 
-    def message_hand_win(self):
-        if self.is_dealer:
-            print("Dealer wins!")
-        elif not self.is_dealer:
-            print("Player wins!")
-
     def player_choice(self, deck):
         '''Prompt player to hit or stand with a hand instance'''
 
@@ -155,88 +149,117 @@ class Hand:
 class Game:
     
     def __init__(self):
-        self.player = []
-        self.dealer = None
-        self.deck = None
+        self.deck = Deck()
+        self.player = Hand(is_dealer = False, is_active = None)
+        self.dealer = Hand(is_dealer = True)
+        self.game_active = True
 
     def check_winner(self):
         if self.dealer.value >= self.player.value:
             print(f'You lose with {str(self.player.value)}. Dealer has {str(self.dealer.value)}')
         else: 
             print(f'You win with {str(self.player.value)}. Dealer has {str(self.dealer.value)}')
-        self.end()   
 
     def end(self):
         print("Goodbye")
         sys.exit()
-    
-    def play(self):
-        # self = Game()
-
-        # create deck
-        self.deck = Deck()
-    
-        # create hands
-        self.player = Hand(is_dealer = False, is_active = True)
-        self.dealer = Hand(is_dealer = True)
-
-        # deal 2 cards to each player
-        for _ in range(2):
-            for p in [self.dealer, self.player]:
-                # p = player
-                p.add_card(self.deck.deal())
-
-        # check for any blackjacks
-        if self.dealer.has_blackjack:
-            self.player.show()
-            self.dealer.show()
-            print('Blackjack!')
-            self.dealer.message_hand_win()
-            self.end()
- 
-        if self.player.has_blackjack and not self.dealer.has_blackjack:
-            self.player.show()
-            self.dealer.show()
-            print('Blackjack!')
-            self.player.message_hand_win()
-            self.end()
-
-        self.dealer.show(dealer_hide = True)
-
-        while self.player.is_active:
-            self.player.show()
-
-            self.player.player_choice(deck = self.deck)
-
-            if self.player.is_bust:
-                self.player.show()
-                print(f"Player busts with {str(self.player.value)}. You lose!")
-                self.player.is_active = False
-                self.end()
         
-        # dealer turn
-        self.dealer.is_active = True
+    def play(self):
+        
+        def clear_console():
+            """Clears the console."""
+            command = 'cls' if os.name in ('nt', 'dos') else 'clear'
+            os.system(command)
 
-        while self.dealer.is_active:
+        while (self.game_active):
+            
+            clear_console()
 
-            while self.dealer.value <= 16:
-                
-                print("Dealer hits...")
-                self.dealer.add_card(self.deck.deal())
+            # clear hands, shuffle and set player turn each time we play
+            self.deck.clear_deck()
+            self.deck.fill_deck()
+            self.deck.shuffle()
+            self.player.clear()
+            self.dealer.clear()
+            self.player.is_active = True
+
+            # deal 2 cards to each player
+            for _ in range(2):
+                for p in [self.dealer, self.player]:
+                    # p = player
+                    p.add_card(self.deck.deal())
+
+            
+            # check for any blackjacks
+            if self.dealer.has_blackjack:
+                self.player.show()
                 self.dealer.show()
+                print('Dealer has blackjack. You Lose.')
+                self.player.is_active = False
                 time.sleep(2)
+    
+            if self.player.has_blackjack and self.player.is_active:
+                self.player.show()
+                self.dealer.show()
+                print('Player has blackjack! You win!')
+                self.player.is_active = False
+                time.sleep(2)
+                
+            while self.player.is_active:
+                
+                # show both hands:
+                self.player.show()
+                self.dealer.show(dealer_hide = True)
+                self.player.player_choice(deck = self.deck)
 
-                if self.dealer.is_bust:
-                    print(f"Dealer busts with {str(self.dealer.value)}. You win!")
+                if self.player.is_bust:
+                    self.player.show()
+                    print(f"Player busts with {str(self.player.value)}. You lose!")
+                    self.player.is_active = False
+            
+            if not self.player.is_bust \
+                and not self.player.has_blackjack \
+                    and not self.dealer.has_blackjack:
+                
+                # dealer turn
+                self.dealer.is_active = True
+                while self.dealer.is_active:
+
+                    while self.dealer.value <= 16 and \
+                        not self.dealer.is_bust:
+                        
+                        print("Dealer hits...")
+                        self.dealer.add_card(self.deck.deal())
+                        self.dealer.show()
+                        time.sleep(2)
+
+                        if self.dealer.is_bust:
+                            print(f"Dealer busts with {str(self.dealer.value)}. You win!")
+                            self.dealer.is_active = False
+
+                    if not self.dealer.is_bust:
+                         print(f"Dealer stands with hand of {str(self.dealer.value)}\n")
+                    
+                    # end dealer turn
                     self.dealer.is_active = False
-                    self.end()
-            
-            self.dealer.is_active = False
-            print(f"Dealer stands with hand of {str(self.dealer.value)}\n")
 
-        if not self.dealer.is_active and not self.player.is_active:
+                # evaluate hands if the game is still going   
+                if not self.dealer.is_active and \
+                    not self.player.is_active and \
+                    not self.player.is_bust and \
+                    not self.dealer.is_bust:
+                    self.check_winner()   
             
-            self.check_winner()             
+            
+            answer = ''
+            while answer not in ['y', 'n']:
+                answer = input("Play again? Y/N:")
+
+                if answer.lower() == 'n':
+                    self.game_active = False
+                    self.end()
+
+
 
         
 
