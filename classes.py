@@ -2,6 +2,8 @@ import random
 import sys
 import time
 import os
+import enlighten
+
 
 class Card:
     # card class
@@ -35,6 +37,7 @@ class Card:
         string = "".join((str(self.rank), self.suit_lu[self.suit]))
         return string
        
+       
 class Deck():
     def __init__(self):
         self.cards = []
@@ -66,10 +69,11 @@ class Deck():
 
 class Hand:
 
-    def __init__(self, is_dealer, is_active = False):
+    def __init__(self, is_dealer, turn = False):
         self.cards = []
         self.is_dealer = is_dealer
-        self.is_active = is_active
+        self.turn = turn
+        self.win_count = 0
 
     def add_card(self, card):
         self.cards.append(card)
@@ -115,29 +119,15 @@ class Hand:
         
         if self.is_dealer:
             if dealer_hide:
-                print(f'Dealer: X, {", ".join(str(card) for card in self.cards[1:])}')
+                return(f' X, {", ".join(str(card) for card in self.cards[1:])}')
             else:
-                print(f'Dealer: {", ".join(str(card) for card in self.cards)}')
+                return(f'{", ".join(str(card) for card in self.cards)}')
         else:
-            print(f'Player: {", ".join(str(card) for card in self.cards)}')
-
-    def player_choice(self, deck):
-        '''Prompt player to hit or stand with a hand instance'''
-
-        answer = ''
-        while answer not in ['h', 's']:
-            answer = input("Hit or Stand? H/S: ")
-            if answer.lower() == "h":
-                print("Player hits...")
-                self.add_card(deck.deal())
-                time.sleep(2)
-            if answer.lower() == "s":
-                print(f"Player stands with hand of {str(self.value)}\n")
-                self.is_active = False
-                time.sleep(2)
+            return(f' {", ".join(str(card) for card in self.cards)}')
+   
 
     def __repr__(self):
-        return f'Hand({self.cards}, {self.is_dealer}, {self.is_active})'
+        return f'Hand({self.cards}, {self.is_dealer}, {self.turn})'
 
     def __str__(self):
         num_cards = f'Number of cards in hand: {len(self.cards)}'
@@ -145,21 +135,14 @@ class Hand:
         return(num_cards + '\n' + value)
 
     
-
 class Game:
     
     def __init__(self):
         self.deck = Deck()
-        self.player = Hand(is_dealer = False, is_active = None)
+        self.player = Hand(is_dealer = False, turn = None)
         self.dealer = Hand(is_dealer = True)
         self.game_active = True
-
-    def check_winner(self):
-        if self.dealer.value >= self.player.value:
-            print(f'You lose with {str(self.player.value)}. Dealer has {str(self.dealer.value)}')
-        else: 
-            print(f'You win with {str(self.player.value)}. Dealer has {str(self.dealer.value)}')
-
+    
     def end(self):
         print("Goodbye")
         sys.exit()
@@ -170,18 +153,53 @@ class Game:
             """Clears the console."""
             command = 'cls' if os.name in ('nt', 'dos') else 'clear'
             os.system(command)
+        
+
+        # set up score board
+        score_manager = enlighten.get_manager()
+        score_status_bar_format = '{fill}Player Score: {player_score}{fill}Dealer Score: {dealer_score}{fill}'
+        score_status_bar = score_manager.status_bar(
+            status_format = score_status_bar_format,
+            color ='red',
+            autorefresh = True,
+            position = 6,
+            player_score = str(0),
+            dealer_score = str(0)
+        )
+
+        # set up container for hands 
+        hand_manager = enlighten.get_manager()
+        hand_status_bar_format = '{fill}{player_hand}{fill}{dealer_hand}{fill}'
+        hand_status_bar = hand_manager.status_bar(
+            status_format = hand_status_bar_format,
+            color = 'blue',
+            position = 2,
+            player_hand = '',
+            dealer_hand = ''
+        )
+        time.sleep(.2)
+
+        # set up container for messages 
+        message_manager = enlighten.get_manager()
+        message_status_bar_format = '{message}'
+        message_status_bar = message_manager.status_bar(
+            status_format = message_status_bar_format,
+            color = 'green',
+            position = 10,
+            message = 'hello'
+        )
+        time.sleep(.2)
 
         while (self.game_active):
-            
             clear_console()
-
+         
             # clear hands, shuffle and set player turn each time we play
             self.deck.clear_deck()
             self.deck.fill_deck()
             self.deck.shuffle()
             self.player.clear()
             self.dealer.clear()
-            self.player.is_active = True
+            self.player.turn = True
 
             # deal 2 cards to each player
             for _ in range(2):
@@ -190,66 +208,106 @@ class Game:
                     p.add_card(self.deck.deal())
 
             
+            # show hand
+            hand_status_bar.update(
+                player_hand = str(self.player.show()),
+                dealer_hand = str(self.dealer.show())
+            )
+            time.sleep(.2)
+
+
             # check for any blackjacks
             if self.dealer.has_blackjack:
-                self.player.show()
-                self.dealer.show()
-                print('Dealer has blackjack. You Lose.')
-                self.player.is_active = False
-                time.sleep(2)
-    
-            if self.player.has_blackjack and self.player.is_active:
-                self.player.show()
-                self.dealer.show()
-                print('Player has blackjack! You win!')
-                self.player.is_active = False
-                time.sleep(2)
-                
-            while self.player.is_active:
-                
-                # show both hands:
-                self.player.show()
-                self.dealer.show(dealer_hide = True)
-                self.player.player_choice(deck = self.deck)
+                message_status_bar.update(message = 'Dealer has blackjack. You Lose.')
+                time.sleep(.2)
 
-                if self.player.is_bust:
-                    self.player.show()
-                    print(f"Player busts with {str(self.player.value)}. You lose!")
-                    self.player.is_active = False
+                self.dealer.win_count += 1
+                self.player.turn = False
+    
+            if self.player.has_blackjack and self.player.turn:
+                message_status_bar.update(message = 'You have blackjack! You Win!')
+                time.sleep(2)
+
+                self.player.win_count += 1
+                self.player.turn = False
+                time.sleep(.2)
+                
+            while self.player.turn:
+                
+                answer = ''
+                while answer not in ['h', 's']:
+                    answer = input("Hit or Stand? H/S: ")
+                                
+                if answer.lower() == "h":
+                    self.player.add_card(self.deck.deal())
+                    hand_status_bar.update(player_hand = str(self.player.show()))
+                    time.sleep(2)
+
+                
+                    if self.player.is_bust:
+                        message_status_bar.update(message = 'Bust! You Lose')
+                        time.sleep(2)
+
+                        self.dealer.win_count += 1
+                        self.player.turn = False
+
+                elif answer.lower() == "s":
+                    self.player.turn = False
+
             
             if not self.player.is_bust \
                 and not self.player.has_blackjack \
                     and not self.dealer.has_blackjack:
                 
                 # dealer turn
-                self.dealer.is_active = True
-                while self.dealer.is_active:
+                self.dealer.turn = True
+                while self.dealer.turn:
 
                     while self.dealer.value <= 16 and \
                         not self.dealer.is_bust:
                         
-                        print("Dealer hits...")
+                        message_status_bar.update(message = 'Dealer hits')
                         self.dealer.add_card(self.deck.deal())
-                        self.dealer.show()
+                        hand_status_bar.update(dealer_hand = str(self.dealer.show()))
                         time.sleep(2)
 
                         if self.dealer.is_bust:
-                            print(f"Dealer busts with {str(self.dealer.value)}. You win!")
-                            self.dealer.is_active = False
+                            message_status_bar.update(message = 'Dealer busts! You Win')
+                            self.player.win_count +=1
+                            self.dealer.turn = False
 
                     if not self.dealer.is_bust:
-                         print(f"Dealer stands with hand of {str(self.dealer.value)}\n")
+                        message_status_bar.update(message = 'Dealer stands')
+                        time.sleep(2)
                     
                     # end dealer turn
-                    self.dealer.is_active = False
+                    self.dealer.turn = False
 
                 # evaluate hands if the game is still going   
-                if not self.dealer.is_active and \
-                    not self.player.is_active and \
+                if not self.dealer.turn and \
+                    not self.player.turn and \
                     not self.player.is_bust and \
                     not self.dealer.is_bust:
-                    self.check_winner()   
+
+                    if self.dealer.value >= self.player.value:
+                        self.dealer.win_count += 1 
+                        message_status_bar.update(message = 'you lose')
+                        time.sleep(2)
+
+
+                    else: 
+                        self.player.win_count += 1 
+                        message_status_bar.update(message = 'you win!')
+                        time.sleep(2)
+
+
             
+            # updates scores
+            score_status_bar.update(
+                player_score = str(self.player.win_count),
+                dealer_score = str(self.dealer.win_count)
+            )
+
             
             answer = ''
             while answer not in ['y', 'n']:
@@ -258,16 +316,3 @@ class Game:
                 if answer.lower() == 'n':
                     self.game_active = False
                     self.end()
-
-
-
-        
-
-
-             
-
-
-
-        # deck = Deck()
-        # deck.fill_deck()
-        # deck.shuffle()
