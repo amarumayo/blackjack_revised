@@ -147,51 +147,52 @@ class Game:
         print("Goodbye")
         sys.exit()
         
+        
     def play(self):
         
         def clear_console():
             """Clears the console."""
             command = 'cls' if os.name in ('nt', 'dos') else 'clear'
-            os.system(command)
+            os.system(command)        
         
-
-        # set up score board
-        score_manager = enlighten.get_manager()
-        score_status_bar_format = '{fill}Player Score: {player_score}{fill}Dealer Score: {dealer_score}{fill}'
-        score_status_bar = score_manager.status_bar(
-            status_format = score_status_bar_format,
-            color ='red',
-            autorefresh = True,
-            position = 6,
-            player_score = str(0),
-            dealer_score = str(0)
-        )
-
-        # set up container for hands 
-        hand_manager = enlighten.get_manager()
-        hand_status_bar_format = '{fill}{player_hand}{fill}{dealer_hand}{fill}'
-        hand_status_bar = hand_manager.status_bar(
-            status_format = hand_status_bar_format,
-            color = 'blue',
-            position = 2,
-            player_hand = '',
-            dealer_hand = ''
-        )
-        time.sleep(.2)
-
-        # set up container for messages 
-        message_manager = enlighten.get_manager()
-        message_status_bar_format = '{message}'
-        message_status_bar = message_manager.status_bar(
-            status_format = message_status_bar_format,
-            color = 'green',
-            position = 10,
-            message = 'hello'
-        )
-        time.sleep(.2)
 
         while (self.game_active):
             clear_console()
+
+            # set up score board
+            score_manager = enlighten.get_manager()
+            score_status_bar_format = '{fill}Player Score: {player_score}{fill}Dealer Score: {dealer_score}{fill}'
+            score_status_bar = score_manager.status_bar(
+                status_format = score_status_bar_format,
+                color ='red',
+                autorefresh = True,
+                position = 6,
+                player_score = self.player.show(),
+                dealer_score = self.dealer.show()
+            )
+
+            # set up container for hands 
+            hand_manager = enlighten.get_manager()
+            hand_status_bar_format = '{fill}{player_hand}{fill}{dealer_hand}{fill}'
+            hand_status_bar = hand_manager.status_bar(
+                status_format = hand_status_bar_format,
+                color = 'blue',
+                position = 2,
+                player_hand = '',
+                dealer_hand = ''
+            )
+            time.sleep(.2)
+
+            # set up container for messages 
+            message_manager = enlighten.get_manager()
+            message_status_bar_format = '{message}'
+            message_status_bar = message_manager.status_bar(
+                status_format = message_status_bar_format,
+                color = 'green',
+                position = 10,
+                message = ''
+            )
+            time.sleep(.2)
          
             # clear hands, shuffle and set player turn each time we play
             self.deck.clear_deck()
